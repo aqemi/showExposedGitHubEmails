@@ -45,7 +45,7 @@ def get_all_repositories_of_a_user(username: str) -> List[Repository]:
     while True:
         continue_loop = True
 
-        url = '{}/users/{}/repos?per_page=100&page={}'.format(API_URL, username, page_counter)
+        url = '{}/user/repos?per_page=100&page={}'.format(API_URL, page_counter)
         result_dict = __api_call(url=url)
 
         if 'message' in result_dict:
@@ -85,8 +85,8 @@ def get_all_emails_of_a_user(username: str, repo_name: str) -> Dict[str, Set[str
 
         if 'message' in result_dict:
             if result_dict['message'] == 'Git Repository is empty.':
-                info('Git repository is empty', verbosity_level=5)
-                break 
+                info('Git repository with the name "{}" is empty'.format(repo_name), verbosity_level=5)
+                return emails_to_name
 
             if 'API rate limit exceeded for ' in result_dict['message']:
                 warning('API rate limit exceeded - not all repos where fetched')
@@ -108,15 +108,13 @@ def get_all_emails_of_a_user(username: str, repo_name: str) -> Dict[str, Set[str
 
             if commit_dict['author'] is None:
                 continue
-            user = commit_dict['author']['login']
-            if user.lower() == username.lower():
-                commit = commit_dict['commit']
-                author_name = commit['author']['name']
-                author_email = commit['author']['email']
-                committer_name = commit['committer']['name']
-                committer_email = commit['committer']['email']
-                emails_to_name[author_email].add(author_name)
-                emails_to_name[committer_email].add(committer_name)
+            commit = commit_dict['commit']
+            author_name = commit['author']['name']
+            author_email = commit['author']['email']
+            committer_name = commit['committer']['name']
+            committer_email = commit['committer']['email']
+            emails_to_name[author_email].add(author_name)
+            emails_to_name[committer_email].add(committer_name)
         if continue_loop and len(result_dict) == 100:
             page_counter += 1
         else:
@@ -132,7 +130,6 @@ def __api_call(url) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(usage='showExposedGitHubEmails [OPTION]... -u USERNAME', description='A crawler which lists all email addresses used in commits of a specific GitHub user using the GitHub API.')
-    parser.add_argument('-u', '--user', dest="user", help="username of the user whose public repositories should be scanned", type=str)
     parser.add_argument('-r', '--repository', dest='repository', help="name of specific repository which should be scanned (default is all repositories)", type=str)
     parser.add_argument('-t', '--token', dest='token', help="provide a GitHub token to increase the API quota which can be used by this script", type=str)
     parser.add_argument('-v', '--verbose', dest="verbose", help="verbose mode", action='store_true', default=False)
@@ -141,11 +138,6 @@ def main():
     parser.add_argument('--no-forks', dest="no_forks", help='ignore forked repositories', action='store_true', default=False)
 
     parsed_arguments = parser.parse_args()
-
-    if parsed_arguments.user is None:
-        warning('No username specified')
-        parser.print_help()
-        exit()
 
     if parsed_arguments.token is not None:
         update_header({'Authorization': 'token {}'.format(parsed_arguments.token)})
@@ -162,18 +154,23 @@ def main():
     if parsed_arguments.repository is not None:
         repos_to_scan = [parsed_arguments.repository]
     else:
-        info('Scan for public repositories of user {}'.format(parsed_arguments.user))
-        repos_to_scan_sorted = sorted(get_all_repositories_of_a_user(username=parsed_arguments.user), key=lambda x: x.is_fork)
+        url = '{}/user'.format(API_URL)
+        user = __api_call(url)
+        username = user['login']
+        info('Scan for all repositories of user {}'.format(username))
+        repos_to_scan_sorted = sorted(get_all_repositories_of_a_user(username=username), key=lambda x: x.is_fork)
         repos_to_scan = [x.name for x in repos_to_scan_sorted if (parsed_arguments.no_forks and not x.is_fork) or not parsed_arguments.no_forks]
-        info('Found {} public repositories'.format(len(repos_to_scan)))
+        info('Found {} repositories'.format(len(repos_to_scan)))
 
     emails_to_name = defaultdict(set)
     try:
         for repo in repos_to_scan:
             info('Scan repository {}'.format(repo))
-            emails_to_name_new = get_all_emails_of_a_user(username=parsed_arguments.user, repo_name=repo)
+            emails_to_name_new = get_all_emails_of_a_user(username=username, repo_name=repo)
             for email, names in emails_to_name_new.items():
                 emails_to_name[email].update(names)
+                formatted_output = f"{repo} - {email}: {', '.join(names)}\n"
+                print(formatted_output)
     except KeyboardInterrupt:
         warning('Keyboard interrupt. Stopped scanning.')
 

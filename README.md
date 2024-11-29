@@ -1,26 +1,25 @@
 # showExposedGitHubEmails
 Is a crawler which lists all email addresses used in commits of a specific GitHub user using the GitHub API.
 
-It iterates through all public respositories owned by the user and all commits in each of these repositories.  
+It iterates through all repositories owned by the user and all commits in each of these repositories.  
 
 
 ## Installation
 
 Install the package with pip
 
-    pip install exposed-github-user-emails-scanner
+    pip install git+https://github.com/aqemi/showExposedGitHubEmails.git
 
 ## Usage
 Type ```showExposedGitHubEmails  --help``` to view the help.
 
 ```
-usage: showExposedGitHubEmails [OPTION]... -u USERNAME
+usage: showExposedGitHubEmails [OPTION]... -t TOKEN
 
 A crawler which lists all email addresses used in commits of a specific GitHub user using the GitHub API.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -u USER, --user USER  username of the user whose public repositories should be scanned
   -r REPOSITORY, --repository REPOSITORY
                         name of specific repository which should be scanned (default is all repositories)
   -t TOKEN, --token TOKEN
@@ -35,7 +34,7 @@ optional arguments:
 
 ## Example
 ```
-$ showExposedGitHubEmails -u AFictionalUsername
+$ showExposedGitHubEmails -t TOKEN
 [+] Scan for public repositories of user AFictionalUsername
 [+] Found 4 public repositories
 [+] Scan repository my_first_project
