@@ -106,8 +106,6 @@ def get_all_emails_of_a_user(username: str, repo_name: str) -> Dict[str, Set[str
             info('scan commit {}'.format(commit_counter), verbosity_level=5)
             commit_counter += 1
 
-            if commit_dict['author'] is None:
-                continue
             commit = commit_dict['commit']
             author_name = commit['author']['name']
             author_email = commit['author']['email']
